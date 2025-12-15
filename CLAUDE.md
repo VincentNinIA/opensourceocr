@@ -73,6 +73,34 @@ The app supports two different OCR approaches via `ocr_with_mistral()`:
 - **503 Service Unavailable**: Mistral backend temporarily down, retry after waiting
 - **400 Invalid Request**: Format error (e.g., trying to send PDF to image endpoint)
 
-### Streamlit Compatibility
+### Table Detection (Optional Feature)
 
-The app uses `use_column_width=True` for image display (older Streamlit syntax). If upgrading Streamlit, consider changing to `use_container_width=True`.
+The app includes an optional table detection feature using PaddleOCR:
+
+- Module: `table_chunker.py`
+- Checkbox: "Détection automatique des tableaux" (images only)
+- When enabled:
+  1. Detects tables in the image using PPStructureV3
+  2. Crops each table with padding
+  3. Applies upscaling for better quality
+  4. Processes each table separately through Mistral OCR
+  5. Validates results (stable column count, plausible values)
+  6. Identifies table type (chemistry, mechanical, generic)
+
+**Important**: This feature is memory-intensive and may not work on Render's free tier (512MB RAM limit). The app will gracefully fall back to standard OCR if PaddleOCR initialization fails.
+
+### Render Deployment Issues
+
+**PaddleOCR Memory Constraints:**
+- PaddleOCR models (~10 models, several GB) are very memory-intensive
+- Render free tier (512MB RAM) may kill the process with SIGTERM during initialization
+- Optimizations applied:
+  - `use_angle_cls=False` - disables angle classification
+  - `lang='en'` - uses English-only models (lighter than multi-language)
+  - `use_gpu=False` - forces CPU mode
+- Consider upgrading to Render's paid tier (more RAM) if table detection is required
+
+**Workarounds:**
+1. Disable table detection checkbox for production use on free tier
+2. Upgrade to Render's Starter plan or higher (2GB+ RAM)
+3. Use alternative deployment platform with more resources (AWS, GCP, Azure)

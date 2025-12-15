@@ -82,8 +82,14 @@ def detect_tables(image_bytes: bytes, upscale_factor: float = 1.5, padding: int 
     if img is None:
         raise ValueError("Impossible de décoder l'image")
 
-    # Initialiser PP-Structure pour la détection de layout
-    engine = PPStructureV3()
+    # Initialiser PP-Structure pour la détection de layout avec paramètres légers
+    # use_angle_cls=False pour désactiver la classification d'angle (économise mémoire)
+    # lang='en' pour modèle anglais uniquement (plus léger que multi-langue)
+    engine = PPStructureV3(
+        use_angle_cls=False,
+        lang='en',
+        use_gpu=False
+    )
 
     # Détecter les régions
     results = engine.predict(img)

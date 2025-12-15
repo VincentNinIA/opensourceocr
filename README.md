@@ -185,8 +185,14 @@ L'application nécessite un environnement Linux pour fonctionner avec PaddleOCR 
 
 - **Premier démarrage** : Peut prendre 10-15 minutes pour télécharger tous les modèles PaddleOCR
 - **Modèles en cache** : Les modèles sont sauvegardés et réutilisés aux redémarrages suivants
-- **Plan gratuit** : Suffisant pour tester, mais peut mettre l'app en veille après inactivité
-- **Plan payant** : Recommandé pour une utilisation en production
+- **Plan gratuit** :
+  - ⚠️ **Limitation importante** : Le plan gratuit (512MB RAM) peut être insuffisant pour PaddleOCR
+  - L'application fonctionnera en mode standard (sans détection automatique de tableaux)
+  - Si la détection de tableaux est activée, l'app basculera automatiquement en mode standard si PaddleOCR échoue
+  - Suffisant pour OCR standard, mais peut mettre l'app en veille après inactivité
+- **Plan payant** :
+  - Recommandé pour utiliser la détection automatique de tableaux (nécessite 2GB+ RAM)
+  - Starter plan ($7/mois) ou supérieur recommandé pour utilisation en production
 
 ### Fichiers de déploiement
 
