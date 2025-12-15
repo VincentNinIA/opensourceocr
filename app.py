@@ -136,7 +136,7 @@ def main():
                 st.success(f"✅ PDF chargé: {uploaded_file.name}")
                 st.info("Le PDF sera traité directement par l'OCR Mistral AI")
             else:
-                st.image(file_bytes, caption="Image uploadée", use_column_width=True)
+                st.image(file_bytes, caption="Image uploadée", width=None)
 
         with col2:
             st.subheader("📝 Texte extrait")
