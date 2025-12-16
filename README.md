@@ -1,16 +1,18 @@
 # OCR Mistral AI avec Streamlit
 
-Application web pour extraire du texte de documents PDF et images en utilisant l'OCR de Mistral AI (modèle Pixtral-12B).
+Application web pour extraire du texte d'images en utilisant l'OCR dédié de Mistral AI.
 
 ## Fonctionnalités
 
-- Upload de fichiers PDF ou images (PNG, JPG, JPEG)
-- **Deux moteurs OCR** : OCR dédié Mistral ou Pixtral avec prompt personnalisé
-- **Détection automatique des tableaux** : Utilise PaddleOCR pour détecter et extraire les tableaux avant l'OCR
-- Upscaling et padding automatique pour améliorer la précision
-- Extraction de texte avec validation de qualité
-- Visualisation côte à côte du document et du texte extrait
-- Téléchargement du texte extrait au format Markdown ou TXT
+- 🖼️ Upload d'images (PNG, JPG, JPEG)
+- 🤖 **OCR dédié Mistral AI** (`mistral-ocr-latest`) - Rapide et structuré
+- 📊 **Détection automatique des tableaux** (optionnel) : Utilise PaddleOCR pour détecter et extraire les tableaux
+  - Découpe automatique des tableaux avec padding
+  - Upscaling pour améliorer la qualité
+  - Validation et typage automatique (chemistry, mechanical, generic)
+- 📝 Résultats au format Markdown avec prévisualisation
+- 💾 Téléchargement du texte extrait au format `.md` ou `.txt`
+- 🎨 Interface utilisateur intuitive
 
 ## Installation
 
@@ -66,13 +68,11 @@ L'application s'ouvrira automatiquement dans votre navigateur par défaut à l'a
 
 ### Workflow
 
-1. Choisissez le moteur OCR (OCR dédié ou Pixtral)
-2. Activez la détection automatique des tableaux si nécessaire (images uniquement)
-3. Sélectionnez le type de fichier (PDF ou Image)
-4. Uploadez votre document
-5. Cliquez sur "Lancer l'OCR"
-6. Visualisez le texte extrait (onglets Markdown formaté / Texte brut)
-7. Téléchargez le résultat au format .md ou .txt
+1. Activez la détection automatique des tableaux si nécessaire (optionnel)
+2. Uploadez votre image (PNG, JPG, JPEG)
+3. Cliquez sur "Lancer l'OCR"
+4. Visualisez le texte extrait (onglets Markdown formaté / Texte brut)
+5. Téléchargez le résultat au format .md ou .txt
 
 ### Détection automatique des tableaux
 
@@ -107,17 +107,16 @@ Lorsque activée, l'application :
 - **numpy**: Calculs numériques
 - **python-dotenv**: Gestion des variables d'environnement
 
-## Modèles utilisés
+## Modèle utilisé
 
-L'application utilise deux modèles Mistral AI :
-- **mistral-ocr-latest**: OCR dédié, rapide et structuré
-- **Pixtral-12B** (`pixtral-12b-2409`): Modèle multimodal avec contrôle via prompt
+L'application utilise le modèle OCR dédié de Mistral AI :
+- **mistral-ocr-latest**: OCR dédié, rapide et structuré en Markdown
 
 ## Limitations
 
-- Les PDFs très volumineux peuvent prendre du temps à convertir
-- La qualité de l'extraction dépend de la qualité du document source
+- La qualité de l'extraction dépend de la qualité de l'image source
 - Nécessite une connexion internet pour l'API Mistral
+- La détection automatique des tableaux nécessite des ressources importantes (RAM)
 
 ## Dépannage
 

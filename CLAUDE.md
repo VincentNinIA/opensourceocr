@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Streamlit web application that performs OCR (Optical Character Recognition) on PDF documents and images using Mistral AI's vision models. The app provides two OCR engines with different capabilities for handling document text extraction.
+This is a Streamlit web application that performs OCR (Optical Character Recognition) on images using Mistral AI's dedicated OCR endpoint. The app supports optional table detection and extraction using PaddleOCR.
 
 ## Running the Application
 
@@ -31,39 +31,38 @@ Use `.env.example` as a template.
 
 ## Architecture
 
-### Two OCR Engines
+### OCR Engine
 
-The app supports two different OCR approaches via `ocr_with_mistral()`:
+The app uses Mistral AI's dedicated OCR endpoint via `ocr_with_mistral()`:
 
-1. **OCR dédié** (`use_pixtral=False`):
-   - Uses Mistral's dedicated OCR endpoint: `client.ocr.process()`
-   - Model: `mistral-ocr-latest`
-   - Returns structured Markdown with proper table formatting
-   - Processes all pages automatically via `ocr_response.pages`
-
-2. **Pixtral** (`use_pixtral=True`):
-   - Uses the vision chat model: `client.chat.complete()`
-   - Model: `pixtral-12b-2409`
-   - Accepts custom prompts for better control over output format
-   - Current prompt instructs model to describe tables line-by-line instead of Markdown tables
-   - Better for handling complex tables or customizing output format
+- Uses `client.ocr.process()` method
+- Model: `mistral-ocr-latest`
+- Returns structured Markdown with proper table formatting
+- Processes all pages automatically via `ocr_response.pages`
 
 ### Document Processing Flow
 
-1. File upload (PDF or image) → `st.file_uploader()`
+**Standard Mode:**
+1. Image upload (PNG/JPG/JPEG) → `st.file_uploader()`
 2. Convert to base64 → `encode_file_to_base64()`
-3. Send to Mistral API → `ocr_with_mistral(file_base64, file_type, api_key, use_pixtral)`
+3. Send to Mistral API → `ocr_with_mistral(file_base64, api_key)`
 4. Display results in two tabs:
    - Markdown rendered view
    - Raw text view
 5. Download options: `.md` or `.txt`
 
+**Table Detection Mode (optional):**
+1. Image upload → detect tables with PaddleOCR's PPStructureV3
+2. Crop each detected table with padding
+3. Upscale cropped regions for better quality
+4. Process each table separately through Mistral OCR
+5. Validate and combine results with quality indicators
+
 ### Key Implementation Details
 
-- PDFs are sent directly as base64-encoded `data:application/pdf;base64,...` (no intermediate conversion needed)
-- Images use `data:image/jpeg;base64,...` format
-- The dedicated OCR endpoint iterates through `ocr_response.pages` to handle multi-page PDFs
-- Pixtral mode processes the entire document in one request but may have content length limitations
+- Images are sent as base64-encoded `data:image/jpeg;base64,...`
+- Table detection uses PaddleOCR with optimized settings (English only, no angle classification, CPU mode)
+- Results include quality metrics: table type (chemistry/mechanical/generic) and column stability
 
 ## Common Issues
 
