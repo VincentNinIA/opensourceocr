@@ -84,143 +84,155 @@ def main():
         help="Utilise PaddleOCR pour détecter et extraire les tableaux avant l'OCR. Améliore la précision pour les documents avec tableaux."
     )
 
-    uploaded_file = st.file_uploader(
-        "Choisissez une image ou un PDF",
+    uploaded_files = st.file_uploader(
+        "Choisissez une ou plusieurs images/PDFs",
         type=["png", "jpg", "jpeg", "pdf"],
-        help="Uploadez un fichier à analyser (les PDFs seront convertis en image)"
+        help="Uploadez un ou plusieurs fichiers à analyser (les PDFs seront convertis en image)",
+        accept_multiple_files=True
     )
 
-    if uploaded_file is not None:
-        col1, col2 = st.columns(2)
+    if uploaded_files:
+        st.info(f"📁 {len(uploaded_files)} fichier(s) uploadé(s)")
 
-        with col1:
-            st.subheader("📥 Document uploadé")
+        # Traiter chaque fichier
+        for file_idx, uploaded_file in enumerate(uploaded_files, 1):
+            st.markdown("---")
+            st.subheader(f"📄 Fichier {file_idx}/{len(uploaded_files)}: {uploaded_file.name}")
 
-            # Lire le fichier
-            file_bytes = uploaded_file.read()
+            col1, col2 = st.columns(2)
 
-            # Détecter si c'est un PDF
-            is_pdf = uploaded_file.name.lower().endswith('.pdf')
+            with col1:
+                st.markdown("**📥 Aperçu**")
 
-            if is_pdf:
-                st.info("📄 PDF détecté - Conversion en PNG en cours...")
-                try:
-                    # Convertir PDF en PNG
-                    file_bytes = pdf_to_png(file_bytes)
-                    st.success("✅ PDF converti en image")
-                    st.image(file_bytes, caption="Page 1 du PDF (convertie)")
-                except Exception as e:
-                    st.error(f"❌ Erreur de conversion: {str(e)}")
-                    st.stop()
-            else:
-                st.image(file_bytes, caption="Image uploadée")
+                # Lire le fichier
+                file_bytes = uploaded_file.read()
 
-        with col2:
-            st.subheader("📝 Texte extrait")
+                # Détecter si c'est un PDF
+                is_pdf = uploaded_file.name.lower().endswith('.pdf')
 
-            # Lancer l'OCR automatiquement
-            with st.spinner("Traitement OCR en cours..."):
-                # Mode avec chunking
-                if use_chunking:
-                    with st.spinner("Détection des tableaux..."):
-                        try:
-                            table_regions = detect_tables(file_bytes, upscale_factor=1.5, padding=30)
-                            st.info(f"🔍 {len(table_regions)} tableau(x) détecté(s)")
-                        except Exception as e:
-                            st.warning(f"Erreur lors de la détection: {str(e)}. Passage en mode standard.")
-                            table_regions = []
+                if is_pdf:
+                    st.info("📄 PDF détecté - Conversion en PNG en cours...")
+                    try:
+                        # Convertir PDF en PNG
+                        file_bytes = pdf_to_png(file_bytes)
+                        st.success("✅ PDF converti en image")
+                        st.image(file_bytes, caption="Page 1 du PDF (convertie)")
+                    except Exception as e:
+                        st.error(f"❌ Erreur de conversion: {str(e)}")
+                        continue  # Passer au fichier suivant
+                else:
+                    st.image(file_bytes, caption="Image uploadée")
 
-                    if table_regions:
-                        # Traiter chaque tableau séparément
-                        all_results = []
-                        for i, region in enumerate(table_regions):
-                            with st.spinner(f"OCR du tableau {i+1}/{len(table_regions)}..."):
-                                result = ocr_with_mistral(region.crop_base64, api_key)
+            with col2:
+                st.markdown("**📝 Texte extrait**")
 
-                                # Analyser la qualité du résultat
-                                md_tables = extract_markdown_tables(result)
-                                best_table = max(md_tables, key=lambda x: len(x), default=[])
-                                table_type = guess_table_type(best_table)
-                                is_valid = stable_column_count(best_table)
+                # Lancer l'OCR automatiquement
+                with st.spinner("Traitement OCR en cours..."):
+                    # Mode avec chunking
+                    if use_chunking:
+                        with st.spinner("Détection des tableaux..."):
+                            try:
+                                table_regions = detect_tables(file_bytes, upscale_factor=1.5, padding=30)
+                                st.info(f"🔍 {len(table_regions)} tableau(x) détecté(s)")
+                            except Exception as e:
+                                st.warning(f"Erreur lors de la détection: {str(e)}. Passage en mode standard.")
+                                table_regions = []
 
-                                all_results.append({
-                                    "index": i + 1,
-                                    "text": result,
-                                    "type": table_type,
-                                    "valid": is_valid,
-                                    "bbox": region.bbox
-                                })
+                        if table_regions:
+                            # Traiter chaque tableau séparément
+                            all_results = []
+                            for i, region in enumerate(table_regions):
+                                with st.spinner(f"OCR du tableau {i+1}/{len(table_regions)}..."):
+                                    result = ocr_with_mistral(region.crop_base64, api_key)
 
-                        # Combiner tous les résultats
-                        extracted_text = "\n\n---\n\n".join([
-                            f"## Tableau {r['index']} (Type: {r['type']}, Qualité: {'✅' if r['valid'] else '⚠️'})\n\n{r['text']}"
-                            for r in all_results
-                        ])
+                                    # Analyser la qualité du résultat
+                                    md_tables = extract_markdown_tables(result)
+                                    best_table = max(md_tables, key=lambda x: len(x), default=[])
+                                    table_type = guess_table_type(best_table)
+                                    is_valid = stable_column_count(best_table)
+
+                                    all_results.append({
+                                        "index": i + 1,
+                                        "text": result,
+                                        "type": table_type,
+                                        "valid": is_valid,
+                                        "bbox": region.bbox
+                                    })
+
+                            # Combiner tous les résultats
+                            extracted_text = "\n\n---\n\n".join([
+                                f"## Tableau {r['index']} (Type: {r['type']}, Qualité: {'✅' if r['valid'] else '⚠️'})\n\n{r['text']}"
+                                for r in all_results
+                            ])
+                        else:
+                            # Fallback si aucun tableau détecté
+                            file_base64 = encode_file_to_base64(file_bytes)
+                            extracted_text = ocr_with_mistral(file_base64, api_key)
                     else:
-                        # Fallback si aucun tableau détecté
+                        # Mode standard sans chunking
                         file_base64 = encode_file_to_base64(file_bytes)
                         extracted_text = ocr_with_mistral(file_base64, api_key)
-                else:
-                    # Mode standard sans chunking
-                    file_base64 = encode_file_to_base64(file_bytes)
-                    extracted_text = ocr_with_mistral(file_base64, api_key)
 
-                if extracted_text and not extracted_text.startswith("Erreur"):
-                    st.success("✅ Extraction terminée")
+                    if extracted_text and not extracted_text.startswith("Erreur"):
+                        st.success("✅ Extraction terminée")
 
-                    # Tabs pour différents formats d'affichage
-                    tab1, tab2 = st.tabs(["📋 Markdown (formaté)", "📝 Texte brut"])
+                        # Tabs pour différents formats d'affichage
+                        tab1, tab2 = st.tabs(["📋 Markdown (formaté)", "📝 Texte brut"])
 
-                    with tab1:
-                        st.markdown("### Aperçu formaté")
-                        st.markdown(extracted_text)
+                        with tab1:
+                            st.markdown("### Aperçu formaté")
+                            st.markdown(extracted_text)
 
-                    with tab2:
-                        st.text_area(
-                            "Texte brut:",
-                            extracted_text,
-                            height=400,
-                            help="Texte extrait en Markdown brut"
-                        )
+                        with tab2:
+                            st.text_area(
+                                "Texte brut:",
+                                extracted_text,
+                                height=400,
+                                help="Texte extrait en Markdown brut",
+                                key=f"text_area_{file_idx}"
+                            )
 
-                    # Options de téléchargement
-                    col_dl1, col_dl2 = st.columns(2)
+                        # Options de téléchargement
+                        col_dl1, col_dl2 = st.columns(2)
 
-                    with col_dl1:
-                        st.download_button(
-                            label="💾 Télécharger (Markdown)",
-                            data=extracted_text,
-                            file_name="texte_extrait.md",
-                            mime="text/markdown",
-                            use_container_width=True
-                        )
+                        with col_dl1:
+                            st.download_button(
+                                label="💾 Télécharger (Markdown)",
+                                data=extracted_text,
+                                file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}_extrait.md",
+                                mime="text/markdown",
+                                use_container_width=True,
+                                key=f"download_md_{file_idx}"
+                            )
 
-                    with col_dl2:
-                        st.download_button(
-                            label="📄 Télécharger (TXT)",
-                            data=extracted_text,
-                            file_name="texte_extrait.txt",
-                            mime="text/plain",
-                            use_container_width=True
-                        )
+                        with col_dl2:
+                            st.download_button(
+                                label="📄 Télécharger (TXT)",
+                                data=extracted_text,
+                                file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}_extrait.txt",
+                                mime="text/plain",
+                                use_container_width=True,
+                                key=f"download_txt_{file_idx}"
+                            )
 
-                    st.info(f"📊 Nombre de caractères: {len(extracted_text)} | Pages: {extracted_text.count('##') + 1 if '##' in extracted_text else 1}")
-                else:
-                    st.error(extracted_text)
+                        st.info(f"📊 Nombre de caractères: {len(extracted_text)} | Pages: {extracted_text.count('##') + 1 if '##' in extracted_text else 1}")
+                    else:
+                        st.error(extracted_text)
     else:
-        st.info("👆 Uploadez un fichier pour commencer")
+        st.info("👆 Uploadez un ou plusieurs fichiers pour commencer")
 
         with st.expander("ℹ️ Comment utiliser cette application"):
             st.markdown("""
             1. **Configurez votre clé API** Mistral AI dans le fichier `.env`
             2. **Activez la détection automatique** des tableaux pour améliorer la précision (optionnel)
-            3. **Uploadez** votre fichier (PNG, JPG, JPEG ou PDF)
-            4. **L'OCR se lance automatiquement** après l'upload
-            5. **Téléchargez** le texte extrait si nécessaire
+            3. **Uploadez** un ou plusieurs fichiers (PNG, JPG, JPEG ou PDF)
+            4. **L'OCR se lance automatiquement** pour chaque fichier
+            5. **Téléchargez** les textes extraits individuellement
 
             ### Fonctionnalités
+            - **Upload multiple**: Uploadez plusieurs fichiers en une seule fois
             - **Support PDF**: Les PDFs sont automatiquement convertis en image (première page)
-            - **OCR automatique**: Le traitement démarre dès l'upload du fichier
+            - **OCR automatique**: Le traitement démarre dès l'upload, pour chaque fichier
             - **OCR standard**: Utilise l'endpoint OCR dédié de Mistral AI (mistral-ocr-latest)
             - **Détection automatique des tableaux**: Découpe et traite chaque tableau séparément (PaddleOCR + upscaling)
               - ⚠️ Nécessite plus de ressources (RAM)
